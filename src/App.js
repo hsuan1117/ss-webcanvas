@@ -8,7 +8,6 @@ function App() {
                 Web 小畫家
             </header>
             <div className={"mt-4 w-full flex flex-col items-center"}>
-                <div className={"w-24 h-24 bg-blue-800"}></div>
                 <Painter/>
             </div>
         </div>

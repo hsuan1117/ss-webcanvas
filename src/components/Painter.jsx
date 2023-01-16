@@ -1,4 +1,5 @@
 import {useEffect, useRef, useState} from "react";
+import Button from "./Button";
 
 export default function Painter() {
     const canvasRef = useRef(null);
@@ -45,7 +46,7 @@ export default function Painter() {
                     break;
                 case "eraser":
                     ctx.globalCompositeOperation = "destination-out";
-                    ctx.arc(e.clientX - canvas.getBoundingClientRect().left, e.clientY - canvas.getBoundingClientRect().top, 10, 0, Math.PI * 2, false);
+                    ctx.arc(e.clientX - canvas.getBoundingClientRect().left, e.clientY - canvas.getBoundingClientRect().top, 0.1, 0, Math.PI * 2, false);
                     ctx.fill();
             }
 
@@ -60,8 +61,8 @@ export default function Painter() {
         <>
             <div className={"bg-sky-600 px-4 py-2 flex items-center gap-2"} >
                 {/* Toolbar */}
-                <div className={"bg-amber-500 rounded"} onClick={()=>setMode('pen')}>Pen</div>
-                <div className={"bg-amber-500 rounded"} onClick={()=>setMode('eraser')}>Eraser</div>
+                <Button onClick={()=>setMode('pen')}>pen</Button>
+                <Button onClick={()=>setMode('eraser')}>Eraser</Button>
             </div>
             <canvas ref={canvasRef} className={'mt-4 border border-gray-700'}
                     height={750}
@@ -75,6 +76,7 @@ export default function Painter() {
             <span className={'text-gray-700'}>{insideCanvas ? 'Inside Canvas' : 'Outside Canvas'}</span>
             <span className={'text-gray-700'}>{isDrawing ? 'Drawing' : 'Not Drawing'}</span>
             <span className={'text-gray-700'}>{`Start Point: ${startPoint.x}, ${startPoint.y}`}</span>
+            <span className={'text-gray-700'}>Tool: {mode}</span>
         </>
     )
 }
