@@ -1,7 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faEraser, faPaintBrush} from "@fortawesome/free-solid-svg-icons";
+import {faCircle, faEraser, faPaintBrush, faRectangleList, faSquare} from "@fortawesome/free-solid-svg-icons";
 
 export default function Painter() {
     const canvasRef = useRef(null);
@@ -49,15 +49,58 @@ export default function Painter() {
                     setStartPoint(getMousePos(canvas, e));
                     break;
                 case "eraser":
-                    ctx.globalCompositeOperation = "source-over";
-                    //ctx.globalCompositeOperation = "destination-out";
-                    ctx.fillStyle = "rgb(0,200,0)";
+                    ctx.globalCompositeOperation = "destination-out";
                     ctx.moveTo(startPoint.x, startPoint.y);
-                    ctx.arc(getMousePos(canvas, e).x, getMousePos(canvas, e).y, 0.1, 0, Math.PI * 2, false);
+                    ctx.arc(getMousePos(canvas, e).x, getMousePos(canvas, e).y, 5, 0, Math.PI * 2, false);
                     ctx.fill();
                     setStartPoint(getMousePos(canvas, e));
-            }
+                    break;
+                case "rect":
+                    ctx.globalCompositeOperation = "source-over";
+                    ctx.fillStyle = "rgb(200,0,0)";
+                    ctx.beginPath()
+                    ctx.moveTo(startPoint.x, startPoint.y);
 
+                    if(e.shiftKey) {
+                        ctx.rect(startPoint.x, startPoint.y, getMousePos(canvas, e).x - startPoint.x, getMousePos(canvas, e).x - startPoint.x);
+                    } else {
+                        ctx.rect(startPoint.x, startPoint.y, getMousePos(canvas, e).x - startPoint.x, getMousePos(canvas, e).y - startPoint.y);
+                    }
+                    ctx.fill();
+                    break;
+                case "circle":
+                    ctx.globalCompositeOperation = "source-over";
+                    ctx.fillStyle = "rgb(200,0,0)";
+                    ctx.beginPath()
+                    ctx.moveTo(startPoint.x, startPoint.y);
+                    ctx.arc(startPoint.x, startPoint.y, Math.sqrt(Math.pow(getMousePos(canvas, e).x - startPoint.x, 2) + Math.pow(getMousePos(canvas, e).y - startPoint.y, 2)), 0, Math.PI * 2, false);
+                    ctx.fill();
+                    break;
+            }
+        }
+    }
+
+    const mouseEnter = () => {
+        setInsideCanvas(true);
+        switch (mode) {
+            case "eraser":
+                const canvas = document.createElement('canvas');
+
+                const radius = 5;
+                canvas.height = radius * 2;
+                canvas.width = radius * 2;
+                const context = canvas.getContext('2d');
+
+                context.beginPath();
+                context.arc(radius, radius, radius, 0, 2 * Math.PI, false);
+                context.fillStyle = 'white';
+                context.fill();
+                canvasRef.current.style.cursor = `url(${canvas.toDataURL()}) 5 5, auto`;
+                break;
+            case "rect":
+            case "circle":
+                canvasRef.current.style.cursor = `crosshair`;
+                break;
         }
     }
 
@@ -75,11 +118,17 @@ export default function Painter() {
                 <Button onClick={() => setMode('eraser')} selected={mode === 'eraser'}>
                     <FontAwesomeIcon icon={faEraser} className={"h-6 w-6"}/>
                 </Button>
+                <Button onClick={() => setMode('rect')} selected={mode === 'rect'}>
+                    <FontAwesomeIcon icon={faSquare} className={"h-6 w-6"}/>
+                </Button>
+                <Button onClick={() => setMode('circle')} selected={mode === 'circle'}>
+                    <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
+                </Button>
             </div>
             <canvas ref={canvasRef} className={'mt-20 border border-gray-700'}
                     height={750}
                     width={750}
-                    onMouseEnter={() => setInsideCanvas(true)}
+                    onMouseEnter={mouseEnter}
                     onMouseLeave={() => setInsideCanvas(false)}
                     onMouseDown={mouseDown}
                     onMouseUp={mouseUp}
