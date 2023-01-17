@@ -2,13 +2,12 @@ import {useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
-    faCircle, faComputerMouse,
-    faEraser, faLocation, faLocationArrow, faLocationDot, faLocationPin, faMaximize, faMouse, faMousePointer,
-    faPaintBrush, faPaperclip,
-    faRectangleList, faRedo,
+    faCircle, faEraser, faMaximize, faMousePointer,
+    faPaintBrush, faRedo,
     faSquare,
-    faTrashCan, faUndo, faWindowMaximize
+    faTrashCan, faUndo
 } from "@fortawesome/free-solid-svg-icons";
+import MenuBar from "./MenuBar";
 
 export default function Painter() {
     const canvasRef = useRef(null);
@@ -184,9 +183,21 @@ export default function Painter() {
         setCurrentHistoryIdx(-1)
     }
 
+    const saveFile = () => {
+        const canvas = canvasRef.current;
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL()
+        link.click();
+    }
+
     return (
         <>
-            <div className={"fixed bg-gray-100 w-full h-16 px-4 py-4 flex justify-between items-center gap-2"}>
+            <div className={"mt-8 fixed z-50 bg-blue-200 w-full h-12 flex justify-start items-center"}>
+                <MenuBar saveFile={saveFile}/>
+            </div>
+            <div
+                className={"mt-20 fixed z-30 bg-gray-100 w-full h-16 px-4 py-4 flex justify-between items-center gap-2"}>
                 {/* Toolbar */}
                 <div>
                     {/* Place start */}
@@ -218,7 +229,7 @@ export default function Painter() {
 
                 </div>
             </div>
-            <div className={'mt-20 w-full flex flex-row justify-around'}>
+            <div className={'mt-40 w-full flex flex-row justify-around'}>
                 <canvas ref={canvasRef} className={'border border-gray-700'}
                         height={750}
                         width={750}
@@ -245,11 +256,14 @@ export default function Painter() {
                     </div>
                 </div>
             </div>
-            <div className={"fixed bottom-0 right-0 bg-gray-100 w-full h-8 px-4 py-4 flex justify-between items-center gap-2"}>
+            <div
+                className={"fixed bottom-0 right-0 bg-gray-100 w-full h-8 px-4 py-4 flex justify-between items-center gap-2"}>
                 <div className={"flex flex-row gap-2"}>
-                    <span className={"pr-8"}><FontAwesomeIcon icon={faMousePointer} /> {Math.floor(currentPoint.x)}, {Math.floor(currentPoint.y)}px</span>
+                    <span className={"pr-8"}><FontAwesomeIcon
+                        icon={faMousePointer}/> {Math.floor(currentPoint.x)}, {Math.floor(currentPoint.y)}px</span>
                     {/*<span className={"border-l border-gray-800 px-4"}><FontAwesomeIcon icon={faMousePointer} /> {Math.floor(currentPoint.x)}, {Math.floor(currentPoint.y)}px</span>
-                    */}<span className={"border-l border-gray-800 px-4"}><FontAwesomeIcon icon={faMaximize} /> {canvasRef.current.width} x {canvasRef.current.height}px</span>
+                    */}<span className={"border-l border-gray-800 px-4"}><FontAwesomeIcon
+                    icon={faMaximize}/> {canvasRef.current?.width ?? 750} x {canvasRef.current?.height ?? 750}px</span>
                 </div>
             </div>
         </>
