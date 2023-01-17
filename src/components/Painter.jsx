@@ -1,5 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 import Button from "./Button";
+import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {faEraser, faPaintBrush} from "@fortawesome/free-solid-svg-icons";
 
 export default function Painter() {
     const canvasRef = useRef(null);
@@ -27,6 +29,8 @@ export default function Painter() {
 
     const mouseUp = (e) => {
         setIsDrawing(false);
+        const canvas = canvasRef.current;
+        setStartPoint(getMousePos(canvas, e));
     }
 
     const mouseMove = (e) => {
@@ -45,9 +49,13 @@ export default function Painter() {
                     setStartPoint(getMousePos(canvas, e));
                     break;
                 case "eraser":
-                    ctx.globalCompositeOperation = "destination-out";
-                    ctx.arc(e.clientX - canvas.getBoundingClientRect().left, e.clientY - canvas.getBoundingClientRect().top, 0.1, 0, Math.PI * 2, false);
+                    ctx.globalCompositeOperation = "source-over";
+                    //ctx.globalCompositeOperation = "destination-out";
+                    ctx.fillStyle = "rgb(0,200,0)";
+                    ctx.moveTo(startPoint.x, startPoint.y);
+                    ctx.arc(getMousePos(canvas, e).x, getMousePos(canvas, e).y, 0.1, 0, Math.PI * 2, false);
                     ctx.fill();
+                    setStartPoint(getMousePos(canvas, e));
             }
 
         }
@@ -59,12 +67,16 @@ export default function Painter() {
 
     return (
         <>
-            <div className={"bg-sky-600 px-4 py-2 flex items-center gap-2"} >
+            <div className={"fixed bg-gray-100 w-full h-16 px-4 py-4 flex items-center gap-2"}>
                 {/* Toolbar */}
-                <Button onClick={()=>setMode('pen')}>pen</Button>
-                <Button onClick={()=>setMode('eraser')}>Eraser</Button>
+                <Button onClick={() => setMode('pen')} selected={mode === 'pen'}>
+                    <FontAwesomeIcon icon={faPaintBrush} className={"h-6 w-6"}/>
+                </Button>
+                <Button onClick={() => setMode('eraser')} selected={mode === 'eraser'}>
+                    <FontAwesomeIcon icon={faEraser} className={"h-6 w-6"}/>
+                </Button>
             </div>
-            <canvas ref={canvasRef} className={'mt-4 border border-gray-700'}
+            <canvas ref={canvasRef} className={'mt-20 border border-gray-700'}
                     height={750}
                     width={750}
                     onMouseEnter={() => setInsideCanvas(true)}
