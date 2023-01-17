@@ -17,6 +17,7 @@ export default function Painter() {
     const [startPoint, setStartPoint] = useState({x: 0, y: 0});
     const [mode, setMode] = useState("pen");
     const [history, setHistory] = useState([]);
+    const [askRealClear, setAskRealClear] = useState(false);
 
     function getMousePos(canvas, evt) {
         const rect = canvas.getBoundingClientRect(), // abs. size of element
@@ -143,12 +144,17 @@ export default function Painter() {
     }, [insideCanvas, isDrawing, startPoint]);
 
     const clear = () => {
+        if(!askRealClear) {
+            setAskRealClear(true);
+            return;
+        }
         setMode('clear')
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         setHistory([]);
         setMode('pen')
+        setAskRealClear(false);
     }
 
     return (
@@ -168,7 +174,7 @@ export default function Painter() {
                     <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
                 </Button>
                 <Button onClick={clear} selected={mode === 'clear'}>
-                    <FontAwesomeIcon icon={faTrashCan} className={"h-6 w-6"}/>
+                    <FontAwesomeIcon icon={faTrashCan} className={`h-6 w-6 ${askRealClear? 'font-bold text-red-600' : ''}`}/>
                 </Button>
             </div>
             <div className={'mt-20 w-full flex flex-row justify-around'}>
@@ -181,8 +187,9 @@ export default function Painter() {
                         onMouseUp={mouseUp}
                         onMouseMove={mouseMove}
                 />
-                <div className={'w-1/4 bg-gray-400 flex flex-col'}>
-
+                <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-1'}>
+                    <div className={'text-2xl text-white font-bold'}>設定</div>
+                    <div className={'text-2xl text-white font-bold'}>設定</div>
                 </div>
             </div>
             <span className={'text-gray-700'}>{insideCanvas ? 'Inside Canvas' : 'Outside Canvas'}</span>
