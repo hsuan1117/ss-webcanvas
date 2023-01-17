@@ -1,7 +1,14 @@
 import {useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
-import {faCircle, faEraser, faPaintBrush, faRectangleList, faSquare} from "@fortawesome/free-solid-svg-icons";
+import {
+    faCircle,
+    faEraser,
+    faPaintBrush,
+    faRectangleList,
+    faSquare,
+    faTrashCan
+} from "@fortawesome/free-solid-svg-icons";
 
 export default function Painter() {
     const canvasRef = useRef(null);
@@ -9,6 +16,7 @@ export default function Painter() {
     const [isDrawing, setIsDrawing] = useState(false);
     const [startPoint, setStartPoint] = useState({x: 0, y: 0});
     const [mode, setMode] = useState("pen");
+    const [history, setHistory] = useState([]);
 
     function getMousePos(canvas, evt) {
         const rect = canvas.getBoundingClientRect(), // abs. size of element
@@ -21,19 +29,40 @@ export default function Painter() {
         }
     }
 
-    const mouseDown = (e) => {
+    const redo = (pop = true) => {
+        if (history.length > 0) {
+            if (pop) setHistory(history.slice(0, history.length - 1));
+        }
+    }
+
+    const preDraw = () => new Promise((resolve) => {
+        if(history.length === 0) resolve();
+        const canvas = canvasRef.current;
+        const ctx = canvasRef.current.getContext("2d");
+        const image = new Image();
+        image.src = history?.[history.length - 1]
+        image.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0);
+            resolve();
+        }
+    })
+
+    const mouseDown = async (e) => {
         setIsDrawing(true);
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
+        await preDraw();
     }
 
     const mouseUp = (e) => {
         setIsDrawing(false);
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
+        setHistory([...history, canvas.toDataURL()]);
     }
 
-    const mouseMove = (e) => {
+    const mouseMove = async (e) => {
         if (isDrawing && insideCanvas) {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext("2d");
@@ -58,22 +87,27 @@ export default function Painter() {
                 case "rect":
                     ctx.globalCompositeOperation = "source-over";
                     ctx.fillStyle = "rgb(200,0,0)";
+                    await preDraw();
                     ctx.beginPath()
                     ctx.moveTo(startPoint.x, startPoint.y);
-
-                    if(e.shiftKey) {
+                    if (e.shiftKey) {
                         ctx.rect(startPoint.x, startPoint.y, getMousePos(canvas, e).x - startPoint.x, getMousePos(canvas, e).x - startPoint.x);
                     } else {
                         ctx.rect(startPoint.x, startPoint.y, getMousePos(canvas, e).x - startPoint.x, getMousePos(canvas, e).y - startPoint.y);
                     }
                     ctx.fill();
                     break;
-                case "circle":
+                case "ellipse":
                     ctx.globalCompositeOperation = "source-over";
                     ctx.fillStyle = "rgb(200,0,0)";
+                    await preDraw();
                     ctx.beginPath()
                     ctx.moveTo(startPoint.x, startPoint.y);
-                    ctx.arc(startPoint.x, startPoint.y, Math.sqrt(Math.pow(getMousePos(canvas, e).x - startPoint.x, 2) + Math.pow(getMousePos(canvas, e).y - startPoint.y, 2)), 0, Math.PI * 2, false);
+                    if (e.shiftKey) {
+                        ctx.arc(startPoint.x, startPoint.y, Math.sqrt(Math.pow(getMousePos(canvas, e).x - startPoint.x, 2) + Math.pow(getMousePos(canvas, e).y - startPoint.y, 2)), 0, Math.PI * 2, false);
+                    } else {
+                        ctx.ellipse(startPoint.x, startPoint.y, Math.abs(getMousePos(canvas, e).x - startPoint.x), Math.abs(getMousePos(canvas, e).y - startPoint.y), 0, 0, Math.PI * 2);
+                    }
                     ctx.fill();
                     break;
             }
@@ -98,7 +132,7 @@ export default function Painter() {
                 canvasRef.current.style.cursor = `url(${canvas.toDataURL()}) 5 5, auto`;
                 break;
             case "rect":
-            case "circle":
+            case "ellipse":
                 canvasRef.current.style.cursor = `crosshair`;
                 break;
         }
@@ -107,6 +141,15 @@ export default function Painter() {
     useEffect(() => {
 
     }, [insideCanvas, isDrawing, startPoint]);
+
+    const clear = () => {
+        setMode('clear')
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setHistory([]);
+        setMode('pen')
+    }
 
     return (
         <>
@@ -121,19 +164,27 @@ export default function Painter() {
                 <Button onClick={() => setMode('rect')} selected={mode === 'rect'}>
                     <FontAwesomeIcon icon={faSquare} className={"h-6 w-6"}/>
                 </Button>
-                <Button onClick={() => setMode('circle')} selected={mode === 'circle'}>
+                <Button onClick={() => setMode('ellipse')} selected={mode === 'ellipse'}>
                     <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
                 </Button>
+                <Button onClick={clear} selected={mode === 'clear'}>
+                    <FontAwesomeIcon icon={faTrashCan} className={"h-6 w-6"}/>
+                </Button>
             </div>
-            <canvas ref={canvasRef} className={'mt-20 border border-gray-700'}
-                    height={750}
-                    width={750}
-                    onMouseEnter={mouseEnter}
-                    onMouseLeave={() => setInsideCanvas(false)}
-                    onMouseDown={mouseDown}
-                    onMouseUp={mouseUp}
-                    onMouseMove={mouseMove}
-            />
+            <div className={'mt-20 w-full flex flex-row justify-around'}>
+                <canvas ref={canvasRef} className={'border border-gray-700'}
+                        height={750}
+                        width={750}
+                        onMouseEnter={mouseEnter}
+                        onMouseLeave={() => setInsideCanvas(false)}
+                        onMouseDown={mouseDown}
+                        onMouseUp={mouseUp}
+                        onMouseMove={mouseMove}
+                />
+                <div className={'w-1/4 bg-gray-400 flex flex-col'}>
+
+                </div>
+            </div>
             <span className={'text-gray-700'}>{insideCanvas ? 'Inside Canvas' : 'Outside Canvas'}</span>
             <span className={'text-gray-700'}>{isDrawing ? 'Drawing' : 'Not Drawing'}</span>
             <span className={'text-gray-700'}>{`Start Point: ${startPoint.x}, ${startPoint.y}`}</span>
