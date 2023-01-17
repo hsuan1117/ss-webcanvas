@@ -5,9 +5,9 @@ import {
     faCircle,
     faEraser,
     faPaintBrush,
-    faRectangleList,
+    faRectangleList, faRedo,
     faSquare,
-    faTrashCan
+    faTrashCan, faUndo
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Painter() {
@@ -17,7 +17,9 @@ export default function Painter() {
     const [startPoint, setStartPoint] = useState({x: 0, y: 0});
     const [mode, setMode] = useState("pen");
     const [history, setHistory] = useState([]);
+    const [currentHistoryIdx, setCurrentHistoryIdx] = useState(-1);
     const [askRealClear, setAskRealClear] = useState(false);
+    const [filename, setFilename] = useState("untitled.png");
 
     function getMousePos(canvas, evt) {
         const rect = canvas.getBoundingClientRect(), // abs. size of element
@@ -30,18 +32,36 @@ export default function Painter() {
         }
     }
 
-    const redo = (pop = true) => {
-        if (history.length > 0) {
-            if (pop) setHistory(history.slice(0, history.length - 1));
+    const redo = () => {
+        if (currentHistoryIdx < history.length - 1) {
+            setCurrentHistoryIdx(currentHistoryIdx + 1);
+            preDraw(currentHistoryIdx + 1)
         }
     }
 
-    const preDraw = () => new Promise((resolve) => {
-        if(history.length === 0) resolve();
+    const undo = () => {
+        if (currentHistoryIdx > 0) {
+            setCurrentHistoryIdx(currentHistoryIdx - 1);
+            preDraw(currentHistoryIdx - 1)
+        }
+    }
+
+    /**
+     * 重繪當前歷史紀錄的畫面（expensive）
+     * */
+    const preDraw = (specificHistoryIdx) => new Promise((resolve) => {
+        // if (history.length === 0 || currentHistoryIdx <= 0) resolve();
         const canvas = canvasRef.current;
         const ctx = canvasRef.current.getContext("2d");
         const image = new Image();
-        image.src = history?.[history.length - 1]
+        if (history.length === 0 || (specificHistoryIdx ?? currentHistoryIdx) < 0) {
+            const canvasElement = document.createElement("canvas");
+            canvasElement.width = canvas.width;
+            canvasElement.height = canvas.height;
+            image.src = canvasElement.toDataURL();
+        } else {
+            image.src = history?.[specificHistoryIdx ?? currentHistoryIdx]
+        }
         image.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(image, 0, 0);
@@ -53,6 +73,7 @@ export default function Painter() {
         setIsDrawing(true);
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
+        setHistory(history.slice(0, currentHistoryIdx + 1));
         await preDraw();
     }
 
@@ -61,6 +82,7 @@ export default function Painter() {
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
         setHistory([...history, canvas.toDataURL()]);
+        setCurrentHistoryIdx(history.length);
     }
 
     const mouseMove = async (e) => {
@@ -88,6 +110,7 @@ export default function Painter() {
                 case "rect":
                     ctx.globalCompositeOperation = "source-over";
                     ctx.fillStyle = "rgb(200,0,0)";
+                    // 畫 上一張儲存的圖片
                     await preDraw();
                     ctx.beginPath()
                     ctx.moveTo(startPoint.x, startPoint.y);
@@ -101,6 +124,7 @@ export default function Painter() {
                 case "ellipse":
                     ctx.globalCompositeOperation = "source-over";
                     ctx.fillStyle = "rgb(200,0,0)";
+                    // 畫 上一張儲存的圖片
                     await preDraw();
                     ctx.beginPath()
                     ctx.moveTo(startPoint.x, startPoint.y);
@@ -144,7 +168,7 @@ export default function Painter() {
     }, [insideCanvas, isDrawing, startPoint]);
 
     const clear = () => {
-        if(!askRealClear) {
+        if (!askRealClear) {
             setAskRealClear(true);
             return;
         }
@@ -155,6 +179,7 @@ export default function Painter() {
         setHistory([]);
         setMode('pen')
         setAskRealClear(false);
+        setCurrentHistoryIdx(-1)
     }
 
     return (
@@ -174,7 +199,14 @@ export default function Painter() {
                     <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
                 </Button>
                 <Button onClick={clear} selected={mode === 'clear'}>
-                    <FontAwesomeIcon icon={faTrashCan} className={`h-6 w-6 ${askRealClear? 'font-bold text-red-600' : ''}`}/>
+                    <FontAwesomeIcon icon={faTrashCan}
+                                     className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
+                </Button>
+                <Button onClick={undo} selected={mode === 'undo'}>
+                    <FontAwesomeIcon icon={faUndo} className={`h-6 w-6`}/>
+                </Button>
+                <Button onClick={redo} selected={mode === 'redo'}>
+                    <FontAwesomeIcon icon={faRedo} className={`h-6 w-6`}/>
                 </Button>
             </div>
             <div className={'mt-20 w-full flex flex-row justify-around'}>
@@ -187,9 +219,21 @@ export default function Painter() {
                         onMouseUp={mouseUp}
                         onMouseMove={mouseMove}
                 />
-                <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-1'}>
+                <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-2'}>
                     <div className={'text-2xl text-white font-bold'}>設定</div>
-                    <div className={'text-2xl text-white font-bold'}>設定</div>
+                    <div className={"flex flex-row w-full justify-between text-white px-4"}>
+                        <span>當前歷史紀錄 ID (0-based)</span>
+                        <span>{currentHistoryIdx}</span>
+                    </div>
+                    <div className={"flex flex-row w-full justify-between text-white px-4"}>
+                        <span>歷史紀錄長度</span>
+                        <span>{history.length}</span>
+                    </div>
+                    <div className={"flex flex-row w-full justify-between text-white px-4"}>
+                        <span>檔案名稱</span>
+                        <input type="text" className={'text-black'} value={filename}
+                               onChange={e => setFilename(e.target.value)}/>
+                    </div>
                 </div>
             </div>
             <span className={'text-gray-700'}>{insideCanvas ? 'Inside Canvas' : 'Outside Canvas'}</span>
