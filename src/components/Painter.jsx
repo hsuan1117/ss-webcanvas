@@ -2,12 +2,12 @@ import {useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
-    faCircle,
-    faEraser,
-    faPaintBrush,
+    faCircle, faComputerMouse,
+    faEraser, faLocation, faLocationArrow, faLocationDot, faLocationPin, faMaximize, faMouse, faMousePointer,
+    faPaintBrush, faPaperclip,
     faRectangleList, faRedo,
     faSquare,
-    faTrashCan, faUndo
+    faTrashCan, faUndo, faWindowMaximize
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function Painter() {
@@ -15,6 +15,7 @@ export default function Painter() {
     const [insideCanvas, setInsideCanvas] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
     const [startPoint, setStartPoint] = useState({x: 0, y: 0});
+    const [currentPoint, setCurrentPoint] = useState({x: 0, y: 0});
     const [mode, setMode] = useState("pen");
     const [history, setHistory] = useState([]);
     const [currentHistoryIdx, setCurrentHistoryIdx] = useState(-1);
@@ -86,6 +87,7 @@ export default function Painter() {
     }
 
     const mouseMove = async (e) => {
+        setCurrentPoint(getMousePos(canvasRef.current, e));
         if (isDrawing && insideCanvas) {
             const canvas = canvasRef.current;
             const ctx = canvas.getContext("2d");
@@ -184,30 +186,37 @@ export default function Painter() {
 
     return (
         <>
-            <div className={"fixed bg-gray-100 w-full h-16 px-4 py-4 flex items-center gap-2"}>
+            <div className={"fixed bg-gray-100 w-full h-16 px-4 py-4 flex justify-between items-center gap-2"}>
                 {/* Toolbar */}
-                <Button onClick={() => setMode('pen')} selected={mode === 'pen'}>
-                    <FontAwesomeIcon icon={faPaintBrush} className={"h-6 w-6"}/>
-                </Button>
-                <Button onClick={() => setMode('eraser')} selected={mode === 'eraser'}>
-                    <FontAwesomeIcon icon={faEraser} className={"h-6 w-6"}/>
-                </Button>
-                <Button onClick={() => setMode('rect')} selected={mode === 'rect'}>
-                    <FontAwesomeIcon icon={faSquare} className={"h-6 w-6"}/>
-                </Button>
-                <Button onClick={() => setMode('ellipse')} selected={mode === 'ellipse'}>
-                    <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
-                </Button>
-                <Button onClick={clear} selected={mode === 'clear'}>
-                    <FontAwesomeIcon icon={faTrashCan}
-                                     className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
-                </Button>
-                <Button onClick={undo} selected={mode === 'undo'}>
-                    <FontAwesomeIcon icon={faUndo} className={`h-6 w-6`}/>
-                </Button>
-                <Button onClick={redo} selected={mode === 'redo'}>
-                    <FontAwesomeIcon icon={faRedo} className={`h-6 w-6`}/>
-                </Button>
+                <div>
+                    {/* Place start */}
+                    <Button onClick={() => setMode('pen')} selected={mode === 'pen'}>
+                        <FontAwesomeIcon icon={faPaintBrush} className={"h-6 w-6"}/>
+                    </Button>
+                    <Button onClick={() => setMode('eraser')} selected={mode === 'eraser'}>
+                        <FontAwesomeIcon icon={faEraser} className={"h-6 w-6"}/>
+                    </Button>
+                    <Button onClick={() => setMode('rect')} selected={mode === 'rect'}>
+                        <FontAwesomeIcon icon={faSquare} className={"h-6 w-6"}/>
+                    </Button>
+                    <Button onClick={() => setMode('ellipse')} selected={mode === 'ellipse'}>
+                        <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
+                    </Button>
+                    <Button onClick={clear} selected={mode === 'clear'}>
+                        <FontAwesomeIcon icon={faTrashCan}
+                                         className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
+                    </Button>
+                    <Button onClick={undo} selected={mode === 'undo'}>
+                        <FontAwesomeIcon icon={faUndo} className={`h-6 w-6`}/>
+                    </Button>
+                    <Button onClick={redo} selected={mode === 'redo'}>
+                        <FontAwesomeIcon icon={faRedo} className={`h-6 w-6`}/>
+                    </Button>
+                </div>
+                <div>
+                    {/* Place end */}
+
+                </div>
             </div>
             <div className={'mt-20 w-full flex flex-row justify-around'}>
                 <canvas ref={canvasRef} className={'border border-gray-700'}
@@ -236,10 +245,13 @@ export default function Painter() {
                     </div>
                 </div>
             </div>
-            <span className={'text-gray-700'}>{insideCanvas ? 'Inside Canvas' : 'Outside Canvas'}</span>
-            <span className={'text-gray-700'}>{isDrawing ? 'Drawing' : 'Not Drawing'}</span>
-            <span className={'text-gray-700'}>{`Start Point: ${startPoint.x}, ${startPoint.y}`}</span>
-            <span className={'text-gray-700'}>Tool: {mode}</span>
+            <div className={"fixed bottom-0 right-0 bg-gray-100 w-full h-8 px-4 py-4 flex justify-between items-center gap-2"}>
+                <div className={"flex flex-row gap-2"}>
+                    <span className={"pr-8"}><FontAwesomeIcon icon={faMousePointer} /> {Math.floor(currentPoint.x)}, {Math.floor(currentPoint.y)}px</span>
+                    {/*<span className={"border-l border-gray-800 px-4"}><FontAwesomeIcon icon={faMousePointer} /> {Math.floor(currentPoint.x)}, {Math.floor(currentPoint.y)}px</span>
+                    */}<span className={"border-l border-gray-800 px-4"}><FontAwesomeIcon icon={faMaximize} /> {canvasRef.current.width} x {canvasRef.current.height}px</span>
+                </div>
+            </div>
         </>
     )
 }
