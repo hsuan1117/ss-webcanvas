@@ -2,15 +2,15 @@ import {useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
-    faCircle, faEraser, faMaximize, faMousePointer,
+    faCircle, faEraser, faFont, faMaximize, faMousePointer,
     faPaintBrush, faRedo,
-    faSquare,
-    faTrashCan, faUndo
+    faSquare, faTrashCan, faUndo
 } from "@fortawesome/free-solid-svg-icons";
 import MenuBar from "./MenuBar";
 
 export default function Painter() {
     const canvasRef = useRef(null);
+    const textInput = useRef(null);
     const [insideCanvas, setInsideCanvas] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
     const [startPoint, setStartPoint] = useState({x: 0, y: 0});
@@ -69,12 +69,33 @@ export default function Painter() {
         }
     })
 
+    const onTextInputBlur = () => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+        ctx.font = "30px Arial";
+        ctx.fillText(textInput.current.value, currentPoint.x, currentPoint.y);
+        textInput.current.value = "";
+        textInput.current.classList.add("hidden");
+        setIsDrawing(false);
+        setHistory([...history, canvas.toDataURL()]);
+        setCurrentHistoryIdx(currentHistoryIdx + 1);
+        setMode("pen");
+        mouseEnter()
+    }
+
     const mouseDown = async (e) => {
         setIsDrawing(true);
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
         setHistory(history.slice(0, currentHistoryIdx + 1));
         await preDraw();
+        if (mode === 'text') {
+            textInput.current.classList.remove("hidden");
+            textInput.current.style.position = "absolute";
+            textInput.current.style.left = canvas.getBoundingClientRect().left + getMousePos(canvas, e).x + "px";
+            textInput.current.style.top = canvas.getBoundingClientRect().top + getMousePos(canvas, e).y + "px"
+            textInput.current.focus();
+        }
     }
 
     const mouseUp = (e) => {
@@ -157,9 +178,16 @@ export default function Painter() {
                 context.fill();
                 canvasRef.current.style.cursor = `url(${canvas.toDataURL()}) 5 5, auto`;
                 break;
+            case "text":
+                canvasRef.current.style.cursor = `text`;
+                break;
             case "rect":
             case "ellipse":
                 canvasRef.current.style.cursor = `crosshair`;
+                break;
+            case "pen":
+            default:
+                canvasRef.current.style.cursor = `default`;
                 break;
         }
     }
@@ -213,6 +241,9 @@ export default function Painter() {
                     <Button onClick={() => setMode('ellipse')} selected={mode === 'ellipse'}>
                         <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
                     </Button>
+                    <Button onClick={() => setMode('text')} selected={mode === 'text'}>
+                        <FontAwesomeIcon icon={faFont} className={"h-6 w-6"}/>
+                    </Button>
                     <Button onClick={clear} selected={mode === 'clear'}>
                         <FontAwesomeIcon icon={faTrashCan}
                                          className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
@@ -239,6 +270,8 @@ export default function Painter() {
                         onMouseUp={mouseUp}
                         onMouseMove={mouseMove}
                 />
+                <input type={"text"} className={"hidden"} ref={textInput} onBlur={onTextInputBlur}
+                       onKeyDown={(e) => e.key === "Enter" ? onTextInputBlur() : null}/>
                 <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-2'}>
                     <div className={'text-2xl text-white font-bold'}>設定</div>
                     <div className={"flex flex-row w-full justify-between text-white px-4"}>
