@@ -7,6 +7,7 @@ import {
     faSquare, faTrashCan, faUndo
 } from "@fortawesome/free-solid-svg-icons";
 import MenuBar from "./MenuBar";
+import {HexColorPicker} from "react-colorful";
 
 export default function Painter() {
     const canvasRef = useRef(null);
@@ -20,6 +21,7 @@ export default function Painter() {
     const [currentHistoryIdx, setCurrentHistoryIdx] = useState(-1);
     const [askRealClear, setAskRealClear] = useState(false);
     const [filename, setFilename] = useState("untitled.png");
+    const [backgroundColor, setBackgroundColor] = useState("transparent");
 
     function getMousePos(canvas, evt) {
         const rect = canvas.getBoundingClientRect(), // abs. size of element
@@ -213,9 +215,22 @@ export default function Painter() {
 
     const saveFile = () => {
         const canvas = canvasRef.current;
+        let dataURL = canvas.toDataURL();
+        if (backgroundColor !== "transparent") {
+            const newCanvas = document.createElement('canvas');
+            newCanvas.width = canvas.width;
+            newCanvas.height = canvas.height;
+            const newCtx = newCanvas.getContext("2d");
+
+            newCtx.fillStyle = backgroundColor;
+            newCtx.fillRect(0, 0, canvas.width, canvas.height);
+            newCtx.drawImage(canvas, 0, 0);
+            dataURL = newCanvas.toDataURL();
+        }
+
         const link = document.createElement('a');
         link.download = filename;
-        link.href = canvas.toDataURL()
+        link.href = dataURL;
         link.click();
     }
 
@@ -262,6 +277,9 @@ export default function Painter() {
             </div>
             <div className={'mt-40 w-full flex flex-row justify-around'}>
                 <canvas ref={canvasRef} className={'border border-gray-700'}
+                        style={{
+                            backgroundColor,
+                        }}
                         height={750}
                         width={750}
                         onMouseEnter={mouseEnter}
@@ -286,6 +304,11 @@ export default function Painter() {
                         <span>檔案名稱</span>
                         <input type="text" className={'text-black'} value={filename}
                                onChange={e => setFilename(e.target.value)}/>
+                    </div>
+
+                    <div className={"flex flex-row w-full justify-between text-white px-4"}>
+                        <span>背景顏色</span>
+                        <HexColorPicker color={backgroundColor} onChange={setBackgroundColor}/>
                     </div>
                 </div>
             </div>
