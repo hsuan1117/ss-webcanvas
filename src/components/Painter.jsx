@@ -45,6 +45,10 @@ export default function Painter() {
         if (currentHistoryIdx > 0) {
             setCurrentHistoryIdx(currentHistoryIdx - 1);
             preDraw(currentHistoryIdx - 1)
+        } else {
+            setCurrentHistoryIdx(-1)
+            //setHistory([])
+            canvasRef.current.getContext("2d").clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
         }
     }
 
@@ -75,7 +79,7 @@ export default function Painter() {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
         ctx.font = "30px Arial";
-        ctx.fillText(textInput.current.value, currentPoint.x, currentPoint.y);
+        ctx.fillText(textInput.current.value, startPoint.x, startPoint.y);
         textInput.current.value = "";
         textInput.current.classList.add("hidden");
         setIsDrawing(false);
@@ -89,6 +93,7 @@ export default function Painter() {
         setIsDrawing(true);
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
+        console.log('set by mouse Down')
         setHistory(history.slice(0, currentHistoryIdx + 1));
         await preDraw();
         if (mode === 'text') {
@@ -104,6 +109,7 @@ export default function Painter() {
         setIsDrawing(false);
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
+        console.log('set by mouse up')
         setHistory([...history, canvas.toDataURL()]);
         setCurrentHistoryIdx(history.length);
     }
@@ -120,7 +126,7 @@ export default function Painter() {
                     ctx.fillStyle = "rgb(200,0,0)";
                     ctx.beginPath()
                     ctx.moveTo(startPoint.x, startPoint.y);
-                    ctx.lineTo(getMousePos(canvas, e).x, getMousePos(canvas, e).y);
+                    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
                     ctx.stroke();
                     setStartPoint(getMousePos(canvas, e));
                     break;
@@ -288,7 +294,7 @@ export default function Painter() {
                         onMouseUp={mouseUp}
                         onMouseMove={mouseMove}
                 />
-                <input type={"text"} className={"hidden"} ref={textInput} onBlur={onTextInputBlur}
+                <input type={"text"} className={"hidden"} ref={textInput}
                        onKeyDown={(e) => e.key === "Enter" ? onTextInputBlur() : null}/>
                 <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-2'}>
                     <div className={'text-2xl text-white font-bold'}>設定</div>
