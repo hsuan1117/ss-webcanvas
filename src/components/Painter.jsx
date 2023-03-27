@@ -1,8 +1,8 @@
-import {useEffect, useRef, useState} from "react";
+import {createElement, useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
-    faCircle, faEraser, faFont, faMaximize, faMousePointer,
+    faCircle, faEraser, faFileImage, faFont, faMaximize, faMousePointer,
     faPaintBrush, faRedo,
     faSquare, faTrashCan, faUndo
 } from "@fortawesome/free-solid-svg-icons";
@@ -12,6 +12,7 @@ import {HexColorPicker} from "react-colorful";
 export default function Painter() {
     const canvasRef = useRef(null);
     const textInput = useRef(null);
+    const inputFileRef = useRef(null);
     const [insideCanvas, setInsideCanvas] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
     const [startPoint, setStartPoint] = useState({x: 0, y: 0});
@@ -103,6 +104,9 @@ export default function Painter() {
             textInput.current.style.top = canvas.getBoundingClientRect().top + getMousePos(canvas, e).y + "px"
             textInput.current.focus();
         }
+        if (mode === 'image') {
+            inputFileRef.current.click();
+        }
     }
 
     const mouseUp = (e) => {
@@ -193,6 +197,9 @@ export default function Painter() {
             case "ellipse":
                 canvasRef.current.style.cursor = `crosshair`;
                 break;
+            case "image":
+                canvasRef.current.style.cursor = `copy`;
+                break;
             case "pen":
             default:
                 canvasRef.current.style.cursor = `default`;
@@ -269,6 +276,9 @@ export default function Painter() {
                         <FontAwesomeIcon icon={faTrashCan}
                                          className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
                     </Button>
+                    <Button onClick={() => setMode('image')} selected={mode === 'image'}>
+                        <FontAwesomeIcon icon={faFileImage} className={`h-6 w-6`}/>
+                    </Button>
                     <Button onClick={undo} selected={mode === 'undo'}>
                         <FontAwesomeIcon icon={faUndo} className={`h-6 w-6`}/>
                     </Button>
@@ -311,11 +321,36 @@ export default function Painter() {
                         <input type="text" className={'text-black'} value={filename}
                                onChange={e => setFilename(e.target.value)}/>
                     </div>
-
                     <div className={"flex flex-row w-full justify-between text-white px-4"}>
                         <span>背景顏色</span>
                         <HexColorPicker color={backgroundColor} onChange={setBackgroundColor}/>
                     </div>
+                    <input
+                        type="file"
+                        ref={inputFileRef}
+                        onChange={() => {
+                            console.log(inputFileRef.current?.files)
+                            if (inputFileRef.current?.files?.length === 1) {
+                                const r = new FileReader();
+                                r.onload = function (e) {
+                                    const canvas = canvasRef.current;
+                                    const ctx = canvasRef.current.getContext("2d");
+                                    const image = new Image();
+                                    image.src = e.target.result
+                                    image.onload = () => {
+                                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                        ctx.drawImage(image, startPoint.x, startPoint.y);
+                                        setHistory([...history, canvas.toDataURL()]);
+                                        setCurrentHistoryIdx(history.length);
+                                    }
+                                    // setStartPoint(getMousePos(canvas, e));
+                                };
+                                r.readAsDataURL(inputFileRef.current.files[0]);
+                            } else {
+                                console.log("failed");
+                            }
+                        }}
+                    />
                 </div>
             </div>
             <div
