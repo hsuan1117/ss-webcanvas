@@ -2,6 +2,7 @@ import {createElement, useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
+    faCheck,
     faCircle, faEraser, faFileImage, faFont, faMaximize, faMousePointer,
     faPaintBrush, faRedo,
     faSquare, faTrashCan, faUndo
@@ -15,6 +16,10 @@ export default function Painter() {
     const inputFileRef = useRef(null);
     const [insideCanvas, setInsideCanvas] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
+    const [fontSize, setFontSize] = useState(12);
+    const [fontColor, setFontColor] = useState("rgb(0 0 0)");
+    const [strokeWidth, setStrokeWidth] = useState(1);
+    const [strokeColor, setStrokeColor] = useState("rgb(0 0 0)");
     const [startPoint, setStartPoint] = useState({x: 0, y: 0});
     const [currentPoint, setCurrentPoint] = useState({x: 0, y: 0});
     const [mode, setMode] = useState("pen");
@@ -42,10 +47,10 @@ export default function Painter() {
         }
     }
 
-    const undo = () => {
+    const undo = async () => {
         if (currentHistoryIdx > 0) {
             setCurrentHistoryIdx(currentHistoryIdx - 1);
-            preDraw(currentHistoryIdx - 1)
+            await preDraw(currentHistoryIdx - 1);
         } else {
             setCurrentHistoryIdx(-1)
             //setHistory([])
@@ -56,18 +61,19 @@ export default function Painter() {
     /**
      * 重繪當前歷史紀錄的畫面（expensive）
      * */
-    const preDraw = (specificHistoryIdx) => new Promise((resolve) => {
+    const preDraw = (specificHistoryIdx = currentHistoryIdx) => new Promise((resolve) => {
         // if (history.length === 0 || currentHistoryIdx <= 0) resolve();
         const canvas = canvasRef.current;
         const ctx = canvasRef.current.getContext("2d");
         const image = new Image();
-        if (history.length === 0 || (specificHistoryIdx ?? currentHistoryIdx) < 0) {
+        if (history.length === 0 || specificHistoryIdx < 0) {
+            alert("hi")
             const canvasElement = document.createElement("canvas");
             canvasElement.width = canvas.width;
             canvasElement.height = canvas.height;
             image.src = canvasElement.toDataURL();
         } else {
-            image.src = history?.[specificHistoryIdx ?? currentHistoryIdx]
+            image.src = history?.[specificHistoryIdx]
         }
         image.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -79,7 +85,8 @@ export default function Painter() {
     const onTextInputBlur = () => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
-        ctx.font = "30px Arial";
+        ctx.font = `${fontSize}px Arial`;
+        ctx.fillStyle = fontColor;
         ctx.fillText(textInput.current.value, startPoint.x, startPoint.y);
         textInput.current.value = "";
         textInput.current.classList.add("hidden");
@@ -96,7 +103,6 @@ export default function Painter() {
         setStartPoint(getMousePos(canvas, e));
         console.log('set by mouse Down')
         setHistory(history.slice(0, currentHistoryIdx + 1));
-        await preDraw();
         if (mode === 'text') {
             textInput.current.classList.remove("hidden");
             textInput.current.style.position = "absolute";
@@ -127,6 +133,7 @@ export default function Painter() {
             switch (mode) {
                 case "pen":
                     ctx.globalCompositeOperation = "source-over";
+                    ctx.lineWidth = strokeWidth;
                     ctx.fillStyle = "rgb(200,0,0)";
                     ctx.beginPath()
                     ctx.moveTo(startPoint.x, startPoint.y);
@@ -137,7 +144,7 @@ export default function Painter() {
                 case "eraser":
                     ctx.globalCompositeOperation = "destination-out";
                     ctx.moveTo(startPoint.x, startPoint.y);
-                    ctx.arc(getMousePos(canvas, e).x, getMousePos(canvas, e).y, 5, 0, Math.PI * 2, false);
+                    ctx.arc(e.nativeEvent.offsetX, e.nativeEvent.offsetY, strokeWidth * 0.2 + 5, 0, Math.PI * 2, false);
                     ctx.fill();
                     setStartPoint(getMousePos(canvas, e));
                     break;
@@ -179,7 +186,7 @@ export default function Painter() {
             case "eraser":
                 const canvas = document.createElement('canvas');
 
-                const radius = 5;
+                const radius = strokeWidth * 0.2 + 5;
                 canvas.height = radius * 2;
                 canvas.width = radius * 2;
                 const context = canvas.getContext('2d');
@@ -188,7 +195,7 @@ export default function Painter() {
                 context.arc(radius, radius, radius, 0, 2 * Math.PI, false);
                 context.fillStyle = 'white';
                 context.fill();
-                canvasRef.current.style.cursor = `url(${canvas.toDataURL()}) 5 5, auto`;
+                canvasRef.current.style.cursor = `url(${canvas.toDataURL()}) ${radius} ${radius}, auto`;
                 break;
             case "text":
                 canvasRef.current.style.cursor = `text`;
@@ -210,6 +217,20 @@ export default function Painter() {
     useEffect(() => {
 
     }, [insideCanvas, isDrawing, startPoint]);
+
+    useEffect(() => {
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
+                undo();
+            } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+                redo();
+            } else if (e.key === 'e' && (e.ctrlKey || e.metaKey)) {
+                setMode('image')
+            } else if (e.key === 'Escape') {
+                setMode('pen')
+            }
+        })
+    })
 
     const clear = () => {
         if (!askRealClear) {
@@ -241,6 +262,10 @@ export default function Painter() {
             dataURL = newCanvas.toDataURL();
         }
 
+        dataToFile(dataURL);
+    }
+
+    const dataToFile = (dataURL) => {
         const link = document.createElement('a');
         link.download = filename;
         link.href = dataURL;
@@ -255,7 +280,7 @@ export default function Painter() {
             <div
                 className={"mt-20 fixed z-30 bg-gray-100 w-full h-16 px-4 py-4 flex justify-between items-center gap-2"}>
                 {/* Toolbar */}
-                <div>
+                <div className={"flex"}>
                     {/* Place start */}
                     <Button onClick={() => setMode('pen')} selected={mode === 'pen'}>
                         <FontAwesomeIcon icon={faPaintBrush} className={"h-6 w-6"}/>
@@ -272,12 +297,17 @@ export default function Painter() {
                     <Button onClick={() => setMode('text')} selected={mode === 'text'}>
                         <FontAwesomeIcon icon={faFont} className={"h-6 w-6"}/>
                     </Button>
-                    <Button onClick={clear} selected={mode === 'clear'}>
-                        <FontAwesomeIcon icon={faTrashCan}
-                                         className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
-                    </Button>
                     <Button onClick={() => setMode('image')} selected={mode === 'image'}>
                         <FontAwesomeIcon icon={faFileImage} className={`h-6 w-6`}/>
+                    </Button>
+                    <div className={"inline w-full border border-gray-300 mx-2"}/>
+                    <Button onClick={clear} selected={mode === 'clear'}>
+                        {askRealClear ?
+                            <FontAwesomeIcon icon={faCheck}
+                                             className={`h-6 w-6 font-bold text-red-600`}/> :
+                            <FontAwesomeIcon icon={faTrashCan}
+                                             className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
+                        }
                     </Button>
                     <Button onClick={undo} selected={mode === 'undo'}>
                         <FontAwesomeIcon icon={faUndo} className={`h-6 w-6`}/>
@@ -306,7 +336,7 @@ export default function Painter() {
                 />
                 <input type={"text"} className={"hidden"} ref={textInput}
                        onKeyDown={(e) => e.key === "Enter" ? onTextInputBlur() : null}/>
-                <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-2'}>
+                <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-3'}>
                     <div className={'text-2xl text-white font-bold'}>設定</div>
                     <div className={"flex flex-row w-full justify-between text-white px-4"}>
                         <span>當前歷史紀錄 ID (0-based)</span>
@@ -321,6 +351,79 @@ export default function Painter() {
                         <input type="text" className={'text-black'} value={filename}
                                onChange={e => setFilename(e.target.value)}/>
                     </div>
+                    <div className={"w-full border border-gray-300 my-3"}/>
+                    <div className={"flex flex-row w-full justify-between items-center text-white px-4"}>
+                        <span>字體大小</span>
+                        <div className={"inline-flex items-center"}>
+                            <select value={fontSize} className={"text-black rounded-md px-2 py-1"} onChange={(e) => {
+                                setFontSize(e.target.value)
+                            }}>
+                                {["8", "9", "10", "12", "14", "16", "18", "20", "22", "24", "28", "30", "36", "48", "72"].map(
+                                    (v, i) =>
+                                        <option key={i} value={v}>{v}</option>
+                                )}
+                            </select>
+                        </div>
+                    </div>
+                    <div className={"flex flex-row w-full justify-between text-white px-4"}>
+                        <span>字體顏色</span>
+                        <div className={"grid grid-cols-5 gap-2"}>
+                            <ColorPickerBtn color={"rgb(254 205 211)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(251 207 232)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(245 208 254)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(221 214 254)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(199 210 254)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(191 219 254)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(165 243 252)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(167 243 208)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(187 247 208)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                            <ColorPickerBtn color={"rgb(0 0 0)"} fontColor={fontColor}
+                                            setFontColor={setFontColor}/>
+                        </div>
+                    </div>
+                    <div className={"w-full border border-gray-300 my-3"}/>
+                    <div className={"flex flex-row w-full justify-between items-center text-white px-4"}>
+                        <span>筆跡大小</span>
+                        <div className={"inline-flex items-center"}>
+                            <input type={"range"} min={1} max={10} value={strokeWidth}
+                                   onChange={e => setStrokeWidth(e.target.value)}/> {strokeWidth}
+                        </div>
+                    </div>
+                    <div className={"flex flex-row w-full justify-between text-white px-4"}>
+                        <span>筆跡顏色</span>
+                        <div className={"grid grid-cols-5 gap-2"}>
+                            <ColorPickerBtn color={"rgb(254 205 211)"} fontColor={strokeColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(251 207 232)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(245 208 254)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(221 214 254)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(199 210 254)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(191 219 254)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(165 243 252)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(167 243 208)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(187 247 208)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                            <ColorPickerBtn color={"rgb(0 0 0)"} fontColor={fontColor}
+                                            setFontColor={setStrokeColor}/>
+                        </div>
+                    </div>
+                    <div className={"w-full border border-gray-300 my-3"}/>
                     <div className={"flex flex-row w-full justify-between text-white px-4"}>
                         <span>背景顏色</span>
                         <HexColorPicker color={backgroundColor} onChange={setBackgroundColor}/>
@@ -328,8 +431,8 @@ export default function Painter() {
                     <input
                         type="file"
                         ref={inputFileRef}
+                        className={"hidden"}
                         onChange={() => {
-                            console.log(inputFileRef.current?.files)
                             if (inputFileRef.current?.files?.length === 1) {
                                 const r = new FileReader();
                                 r.onload = function (e) {
@@ -338,7 +441,7 @@ export default function Painter() {
                                     const image = new Image();
                                     image.src = e.target.result
                                     image.onload = () => {
-                                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                        //ctx.clearRect(0, 0, canvas.width, canvas.height);
                                         ctx.drawImage(image, startPoint.x, startPoint.y);
                                         setHistory([...history, canvas.toDataURL()]);
                                         setCurrentHistoryIdx(history.length);
@@ -364,5 +467,17 @@ export default function Painter() {
                 </div>
             </div>
         </>
+    )
+}
+
+function ColorPickerBtn({color, fontColor, setFontColor}) {
+    return (
+        <div
+            className={`cursor-pointer rounded-full h-6 w-6 ${fontColor === color ? 'border-2 border-white shadow-2xl' : ''}`}
+            style={{
+                backgroundColor: color
+            }} onClick={() => {
+            setFontColor(color)
+        }}></div>
     )
 }
