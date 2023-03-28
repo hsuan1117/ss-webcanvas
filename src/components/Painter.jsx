@@ -1,11 +1,11 @@
-import {createElement, useEffect, useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import Button from "./Button";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {
     faCheck,
-    faCircle, faEraser, faFileImage, faFont, faMaximize, faMousePointer,
+    faCircle, faEraser, faFileImage, faFont, faICursor, faMaximize, faMousePointer,
     faPaintBrush, faRedo,
-    faSquare, faTrashCan, faUndo
+    faSquare, faTextSlash, faTrashCan, faUndo
 } from "@fortawesome/free-solid-svg-icons";
 import MenuBar from "./MenuBar";
 import {HexColorPicker} from "react-colorful";
@@ -16,6 +16,7 @@ export default function Painter() {
     const inputFileRef = useRef(null);
     const [insideCanvas, setInsideCanvas] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
+    const [font, setFont] = useState("Arial");
     const [fontSize, setFontSize] = useState(12);
     const [fontColor, setFontColor] = useState("rgb(0 0 0)");
     const [strokeWidth, setStrokeWidth] = useState(1);
@@ -67,7 +68,6 @@ export default function Painter() {
         const ctx = canvasRef.current.getContext("2d");
         const image = new Image();
         if (history.length === 0 || specificHistoryIdx < 0) {
-            alert("hi")
             const canvasElement = document.createElement("canvas");
             canvasElement.width = canvas.width;
             canvasElement.height = canvas.height;
@@ -85,7 +85,7 @@ export default function Painter() {
     const onTextInputBlur = () => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
-        ctx.font = `${fontSize}px Arial`;
+        ctx.font = `${fontSize}px ${font}`;
         ctx.fillStyle = fontColor;
         ctx.fillText(textInput.current.value, startPoint.x, startPoint.y);
         textInput.current.value = "";
@@ -295,30 +295,47 @@ export default function Painter() {
                         <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
                     </Button>
                     <Button onClick={() => setMode('text')} selected={mode === 'text'}>
-                        <FontAwesomeIcon icon={faFont} className={"h-6 w-6"}/>
+                        <FontAwesomeIcon icon={faICursor} className={"h-6 w-6"}/>
                     </Button>
                     <Button onClick={() => setMode('image')} selected={mode === 'image'}>
                         <FontAwesomeIcon icon={faFileImage} className={`h-6 w-6`}/>
                     </Button>
                     <div className={"inline w-full border border-gray-300 mx-2"}/>
+                    <div className={"inline-flex items-center gap-2"}>
+                        <FontAwesomeIcon icon={faFont} className={"h-6 w-6"}/>
+                        <select value={font} className={"text-black rounded-md px-2 py-1"} onChange={(e) => {
+                            setFont(e.target.value)
+                        }}>
+                            {["Arial", "Times New Roman"].map(
+                                (v, i) =>
+                                    <option key={i} value={v}>{v}</option>
+                            )}
+                        </select>
+                        <select value={fontSize} className={"text-black rounded-md px-2 py-1"} onChange={(e) => {
+                            setFontSize(e.target.value)
+                        }} defaultValue={fontSize}>
+                            {["8", "9", "10", "12", "14", "16", "18", "20", "22", "24", "28", "30", "36", "48", "72"].map(
+                                (v, i) =>
+                                    <option key={i} value={v}>{v}</option>
+                            )}
+                        </select>
+                    </div>
+                </div>
+                <div>
                     <Button onClick={clear} selected={mode === 'clear'}>
                         {askRealClear ?
                             <FontAwesomeIcon icon={faCheck}
-                                             className={`h-6 w-6 font-bold text-red-600`}/> :
+                                             className={`h-5 w-5 font-bold text-red-600`}/> :
                             <FontAwesomeIcon icon={faTrashCan}
-                                             className={`h-6 w-6 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
+                                             className={`h-5 w-5 ${askRealClear ? 'font-bold text-red-600' : ''}`}/>
                         }
                     </Button>
                     <Button onClick={undo} selected={mode === 'undo'}>
-                        <FontAwesomeIcon icon={faUndo} className={`h-6 w-6`}/>
+                        <FontAwesomeIcon icon={faUndo} className={`h-5 w-5`}/>
                     </Button>
                     <Button onClick={redo} selected={mode === 'redo'}>
-                        <FontAwesomeIcon icon={faRedo} className={`h-6 w-6`}/>
+                        <FontAwesomeIcon icon={faRedo} className={`h-5 w-5`}/>
                     </Button>
-                </div>
-                <div>
-                    {/* Place end */}
-
                 </div>
             </div>
             <div className={'mt-40 w-full flex flex-row justify-around'}>
@@ -352,19 +369,6 @@ export default function Painter() {
                                onChange={e => setFilename(e.target.value)}/>
                     </div>
                     <div className={"w-full border border-gray-300 my-3"}/>
-                    <div className={"flex flex-row w-full justify-between items-center text-white px-4"}>
-                        <span>字體大小</span>
-                        <div className={"inline-flex items-center"}>
-                            <select value={fontSize} className={"text-black rounded-md px-2 py-1"} onChange={(e) => {
-                                setFontSize(e.target.value)
-                            }}>
-                                {["8", "9", "10", "12", "14", "16", "18", "20", "22", "24", "28", "30", "36", "48", "72"].map(
-                                    (v, i) =>
-                                        <option key={i} value={v}>{v}</option>
-                                )}
-                            </select>
-                        </div>
-                    </div>
                     <div className={"flex flex-row w-full justify-between text-white px-4"}>
                         <span>字體顏色</span>
                         <div className={"grid grid-cols-5 gap-2"}>
