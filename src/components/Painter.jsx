@@ -25,6 +25,8 @@ import {HexColorPicker} from "react-colorful";
 import KeyboardUsage from "./KeyboardUsage";
 import MenuBarCloud from "./MenuBarCloud";
 import {importFile} from "../common/cloud";
+import {PlayIcon} from "@heroicons/react/24/solid";
+import {PlayIcon as PlayIconOutline} from "@heroicons/react/24/outline";
 
 export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
     const canvasRef = useRef(null);
@@ -187,6 +189,28 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
                     else
                         ctx.stroke();
                     break;
+                case "triangle":
+                    ctx.globalCompositeOperation = "source-over";
+                    ctx.fillStyle = strokeColor;
+                    ctx.strokeStyle = strokeColor;
+                    // 畫 上一張儲存的圖片
+                    await preDraw();
+                    ctx.beginPath()
+                    ctx.moveTo(startPoint.x, startPoint.y);
+                    if (e.shiftKey) {
+                        ctx.lineTo(startPoint.x + (getMousePos(canvas, e).x - startPoint.x), startPoint.y);
+                        ctx.lineTo(startPoint.x + (getMousePos(canvas, e).x - startPoint.x) / 2, startPoint.y + (getMousePos(canvas, e).x - startPoint.x));
+                        ctx.lineTo(startPoint.x, startPoint.y);
+                    } else {
+                        ctx.lineTo(startPoint.x + (getMousePos(canvas, e).x - startPoint.x), startPoint.y);
+                        ctx.lineTo(startPoint.x + (getMousePos(canvas, e).x - startPoint.x) / 2, startPoint.y + (getMousePos(canvas, e).y - startPoint.y));
+                        ctx.lineTo(startPoint.x, startPoint.y);
+                    }
+                    if (strokeOrFill === "fill")
+                        ctx.fill();
+                    else
+                        ctx.stroke();
+                    break;
                 case "ellipse":
                     ctx.globalCompositeOperation = "source-over";
                     ctx.fillStyle = strokeColor;
@@ -233,6 +257,7 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
             case "text":
                 canvasRef.current.style.cursor = `text`;
                 break;
+            case "triangle":
             case "rect":
             case "ellipse":
                 canvasRef.current.style.cursor = `crosshair`;
@@ -351,6 +376,13 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
                         strokeOrFill === "stroke" ?
                             <FontAwesomeIcon icon={faSquareOutline} className={"h-6 w-6"}/> :
                             <FontAwesomeIcon icon={faSquare} className={"h-6 w-6"}/>
+                    }
+                </Button>
+                <Button onClick={() => toggleBtn('triangle')} selected={mode === 'triangle'}>
+                    {
+                        strokeOrFill === "stroke" ?
+                            <PlayIconOutline className={"h-8 w-8"}/> :
+                            <PlayIcon className={"h-8 w-8"}/>
                     }
                 </Button>
                 <Button onClick={() => toggleBtn('ellipse')} selected={mode === 'ellipse'}>
