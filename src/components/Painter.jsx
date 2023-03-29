@@ -275,7 +275,7 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
     useEffect(() => {
         const sp = new URLSearchParams(window.location.search)
         importFile(sp.get('load'), sp.get('password'), loadImage, false)
-    }, [])
+    }, [loadImage])
 
     useEffect(() => {
         const handler = (e) => {

@@ -13,7 +13,7 @@ function AboutUs({isOpen, setIsOpen}) {
                     Web小畫家</Dialog.Title>
                 <Dialog.Description className={"mt-6"}>
                     Made with ❤️ by <a href={"https://github.com/hsuan1117/"} target={"_blank"}
-                                       className={"underline"}>hsuan1117</a>
+                                       className={"underline"} rel="noreferrer">hsuan1117</a>
                 </Dialog.Description>
 
                 <p>

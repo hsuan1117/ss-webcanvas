@@ -1,6 +1,6 @@
 import {Fragment} from 'react'
 import {Dialog, Transition} from '@headlessui/react'
-import {ExclamationTriangleIcon, InformationCircleIcon, XMarkIcon} from '@heroicons/react/24/outline'
+import {InformationCircleIcon, XMarkIcon} from '@heroicons/react/24/outline'
 
 export default function KeyboardUsage({open, setOpen}) {
 
