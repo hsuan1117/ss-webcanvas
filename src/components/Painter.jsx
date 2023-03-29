@@ -16,15 +16,21 @@ import {
     faTrashCan,
     faUndo
 } from "@fortawesome/free-solid-svg-icons";
+import {
+    faSquare as faSquareOutline,
+    faCircle as faCircleOutline
+} from "@fortawesome/free-regular-svg-icons";
 import MenuBar from "./MenuBar";
 import {HexColorPicker} from "react-colorful";
+import KeyboardUsage from "./KeyboardUsage";
 
-export default function Painter() {
+export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
     const canvasRef = useRef(null);
     const textInput = useRef(null);
     const inputFileRef = useRef(null);
     const [insideCanvas, setInsideCanvas] = useState(false);
     const [isDrawing, setIsDrawing] = useState(false);
+    const [strokeOrFill, setStrokeOrFill] = useState("stroke");
     const [font, setFont] = useState("Arial");
     const [fontSize, setFontSize] = useState(12);
     const [fontColor, setFontColor] = useState("rgb(0 0 0)");
@@ -91,6 +97,11 @@ export default function Painter() {
         }
     })
 
+    const toggleBtn = (mode) => {
+        setMode(mode);
+        setStrokeOrFill(strokeOrFill === "stroke" ? "fill" : "stroke");
+    }
+
     const onTextInputBlur = () => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
@@ -109,8 +120,8 @@ export default function Painter() {
     const mouseDown = async (e) => {
         setIsDrawing(true);
         const canvas = canvasRef.current;
+        canvas.getContext('2d').beginPath();
         setStartPoint(getMousePos(canvas, e));
-        console.log('set by mouse Down')
         setHistory(history.slice(0, currentHistoryIdx + 1));
         if (mode === 'text') {
             textInput.current.classList.remove("hidden");
@@ -128,7 +139,6 @@ export default function Painter() {
         setIsDrawing(false);
         const canvas = canvasRef.current;
         setStartPoint(getMousePos(canvas, e));
-        console.log('set by mouse up')
         setHistory([...history, canvas.toDataURL()]);
         setCurrentHistoryIdx(history.length);
     }
@@ -144,7 +154,6 @@ export default function Painter() {
                     ctx.globalCompositeOperation = "source-over";
                     ctx.lineWidth = strokeWidth;
                     ctx.strokeStyle = strokeColor;
-                    ctx.beginPath()
                     ctx.moveTo(startPoint.x, startPoint.y);
                     ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
                     ctx.stroke();
@@ -159,7 +168,8 @@ export default function Painter() {
                     break;
                 case "rect":
                     ctx.globalCompositeOperation = "source-over";
-                    ctx.fillStyle = "rgb(200,0,0)";
+                    ctx.fillStyle = strokeColor;
+                    ctx.strokeStyle = strokeColor;
                     // 畫 上一張儲存的圖片
                     await preDraw();
                     ctx.beginPath()
@@ -169,11 +179,15 @@ export default function Painter() {
                     } else {
                         ctx.rect(startPoint.x, startPoint.y, getMousePos(canvas, e).x - startPoint.x, getMousePos(canvas, e).y - startPoint.y);
                     }
-                    ctx.fill();
+                    if (strokeOrFill === "fill")
+                        ctx.fill();
+                    else
+                        ctx.stroke();
                     break;
                 case "ellipse":
                     ctx.globalCompositeOperation = "source-over";
-                    ctx.fillStyle = "rgb(200,0,0)";
+                    ctx.fillStyle = strokeColor;
+                    ctx.strokeStyle = strokeColor;
                     // 畫 上一張儲存的圖片
                     await preDraw();
                     ctx.beginPath()
@@ -183,7 +197,12 @@ export default function Painter() {
                     } else {
                         ctx.ellipse(startPoint.x, startPoint.y, Math.abs(getMousePos(canvas, e).x - startPoint.x), Math.abs(getMousePos(canvas, e).y - startPoint.y), 0, 0, Math.PI * 2);
                     }
-                    ctx.fill();
+                    if (strokeOrFill === "fill")
+                        ctx.fill();
+                    else
+                        ctx.stroke();
+                    break;
+                default:
                     break;
             }
         }
@@ -230,17 +249,28 @@ export default function Painter() {
     }, [insideCanvas, isDrawing, startPoint]);
 
     useEffect(() => {
-        window.addEventListener('keydown', (e) => {
+        const handler = (e) => {
+            if (e.repeat) return
             if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
                 undo();
             } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault()
                 redo();
             } else if (e.key === 'e' && (e.ctrlKey || e.metaKey)) {
                 setMode('image')
+            } else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault()
+                saveFile()
+            } else if (e.key === 't') {
+                setMode('text')
             } else if (e.key === 'Escape') {
                 setMode('pen')
             }
-        })
+        }
+        window.addEventListener('keydown', handler)
+        return () => {
+            window.removeEventListener('keydown', handler);
+        };
     })
 
     const clear = () => {
@@ -259,6 +289,7 @@ export default function Painter() {
     }
 
     const saveFile = () => {
+        console.log(1)
         const canvas = canvasRef.current;
         let dataURL = canvas.toDataURL();
         if (backgroundColor !== "transparent") {
@@ -298,11 +329,19 @@ export default function Painter() {
                 <Button onClick={() => setMode('eraser')} selected={mode === 'eraser'}>
                     <FontAwesomeIcon icon={faEraser} className={"h-6 w-6"}/>
                 </Button>
-                <Button onClick={() => setMode('rect')} selected={mode === 'rect'}>
-                    <FontAwesomeIcon icon={faSquare} className={"h-6 w-6"}/>
+                <Button onClick={() => toggleBtn('rect')} selected={mode === 'rect'}>
+                    {
+                        strokeOrFill === "stroke" ?
+                            <FontAwesomeIcon icon={faSquareOutline} className={"h-6 w-6"}/> :
+                            <FontAwesomeIcon icon={faSquare} className={"h-6 w-6"}/>
+                    }
                 </Button>
-                <Button onClick={() => setMode('ellipse')} selected={mode === 'ellipse'}>
-                    <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
+                <Button onClick={() => toggleBtn('ellipse')} selected={mode === 'ellipse'}>
+                    {
+                        strokeOrFill === "stroke" ?
+                            <FontAwesomeIcon icon={faCircleOutline} className={"h-6 w-6"}/> :
+                            <FontAwesomeIcon icon={faCircle} className={"h-6 w-6"}/>
+                    }
                 </Button>
                 <Button onClick={() => setMode('text')} selected={mode === 'text'}>
                     <FontAwesomeIcon icon={faICursor} className={"h-6 w-6"}/>
@@ -316,7 +355,9 @@ export default function Painter() {
                     <select value={font} className={"text-black rounded-md px-2 py-1"} onChange={(e) => {
                         setFont(e.target.value)
                     }}>
-                        {["Arial", "Times New Roman"].map((v, i) => <option key={i} value={v}>{v}</option>)}
+                        {["Arial", "Times New Roman", "FakePearl-Regular", "Delicious Handrawn"].map((v, i) => <option
+                            key={i}
+                            value={v}>{v}</option>)}
                     </select>
                     <select value={fontSize} className={"text-black rounded-md px-2 py-1"} onChange={(e) => {
                         setFontSize(e.target.value)
@@ -354,21 +395,26 @@ export default function Painter() {
                     onMouseUp={mouseUp}
                     onMouseMove={mouseMove}
             />
-            <input type={"text"} className={"hidden"} ref={textInput}
-                   onKeyDown={(e) => e.key === "Enter" ? onTextInputBlur() : null}/>
+            <input type={"text"} className={"hidden rounded-md border-0 px-2 py-1.5 shadow-sm"} ref={textInput}
+                   onKeyDown={(e) => e.key === "Enter" ? onTextInputBlur() : null}
+                   style={{
+                       fontFamily: font,
+                       fontSize: fontSize + "px",
+                       color: fontColor,
+                   }}/>
             <div className={'w-1/4 bg-gray-400 flex flex-col p-2 gap-3'}>
                 <div className={'text-2xl text-white font-bold'}>設定</div>
-                <div className={"flex flex-row w-full justify-between text-white px-4"}>
+                {/*<div className={"flex flex-row w-full justify-between text-white px-4"}>
                     <span>當前歷史紀錄 ID (0-based)</span>
                     <span>{currentHistoryIdx}</span>
                 </div>
                 <div className={"flex flex-row w-full justify-between text-white px-4"}>
                     <span>歷史紀錄長度</span>
                     <span>{history.length}</span>
-                </div>
+                </div>*/}
                 <div className={"flex flex-row w-full justify-between text-white px-4"}>
                     <span>檔案名稱</span>
-                    <input type="text" className={'text-black'} value={filename}
+                    <input type="text" className={'text-black block rounded-md border-0 px-2 py-1.5 shadow-sm'} value={filename}
                            onChange={e => setFilename(e.target.value)}/>
                 </div>
                 <div className={"w-full border border-gray-300 my-3"}/>
@@ -449,7 +495,6 @@ export default function Painter() {
                                 const image = new Image();
                                 image.src = e.target.result
                                 image.onload = () => {
-                                    //ctx.clearRect(0, 0, canvas.width, canvas.height);
                                     ctx.drawImage(image, startPoint.x, startPoint.y);
                                     setHistory([...history, canvas.toDataURL()]);
                                     setCurrentHistoryIdx(history.length);
@@ -474,6 +519,7 @@ export default function Painter() {
                 icon={faMaximize}/> {canvasRef.current?.width ?? 750} x {canvasRef.current?.height ?? 750}px</span>
             </div>
         </div>
+        <KeyboardUsage open={keyboardUsageOpen} setOpen={setKeyboardUsageOpen}/>
     </>)
 }
 
