@@ -273,11 +273,6 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
     }
 
     useEffect(() => {
-        const sp = new URLSearchParams(window.location.search)
-        importFile(sp.get('load'), sp.get('password'), loadImage, false)
-    }, [loadImage])
-
-    useEffect(() => {
         const handler = (e) => {
             if (e.repeat) return
             if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
@@ -354,6 +349,11 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
             setCurrentHistoryIdx(history.length);
         }
     }
+
+    useEffect(() => {
+        const sp = new URLSearchParams(window.location.search)
+        importFile(sp.get('load'), sp.get('password'), loadImage, false)
+    })
 
     return (<>
         <div className={"mt-8 fixed z-50 bg-blue-200 w-full h-12 flex justify-start items-center"}>
