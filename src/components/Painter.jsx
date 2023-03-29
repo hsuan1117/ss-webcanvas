@@ -23,6 +23,8 @@ import {
 import MenuBar from "./MenuBar";
 import {HexColorPicker} from "react-colorful";
 import KeyboardUsage from "./KeyboardUsage";
+import MenuBarCloud from "./MenuBarCloud";
+import {importFile} from "../common/cloud";
 
 export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
     const canvasRef = useRef(null);
@@ -82,6 +84,11 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
         const canvas = canvasRef.current;
         const ctx = canvasRef.current.getContext("2d");
         const image = new Image();
+        image.onload = async () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0);
+            resolve();
+        }
         if (history.length === 0 || specificHistoryIdx < 0) {
             const canvasElement = document.createElement("canvas");
             canvasElement.width = canvas.width;
@@ -89,11 +96,6 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
             image.src = canvasElement.toDataURL();
         } else {
             image.src = history?.[specificHistoryIdx]
-        }
-        image.onload = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(image, 0, 0);
-            resolve();
         }
     })
 
@@ -154,7 +156,7 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
                     ctx.globalCompositeOperation = "source-over";
                     ctx.lineWidth = strokeWidth;
                     ctx.strokeStyle = strokeColor;
-                    ctx.moveTo(startPoint.x, startPoint.y);
+                    //ctx.moveTo(startPoint.x, startPoint.y);
                     ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
                     ctx.stroke();
                     setStartPoint(getMousePos(canvas, e));
@@ -165,6 +167,7 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
                     ctx.arc(e.nativeEvent.offsetX, e.nativeEvent.offsetY, strokeWidth * 0.2 + 5, 0, Math.PI * 2, false);
                     ctx.fill();
                     setStartPoint(getMousePos(canvas, e));
+                    ctx.globalCompositeOperation = "source-over";
                     break;
                 case "rect":
                     ctx.globalCompositeOperation = "source-over";
@@ -245,8 +248,9 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
     }
 
     useEffect(() => {
-
-    }, [insideCanvas, isDrawing, startPoint]);
+        const sp = new URLSearchParams(window.location.search)
+        importFile(sp.get('load'), sp.get('password'), loadImage, false)
+    }, [])
 
     useEffect(() => {
         const handler = (e) => {
@@ -289,7 +293,6 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
     }
 
     const saveFile = () => {
-        console.log(1)
         const canvas = canvasRef.current;
         let dataURL = canvas.toDataURL();
         if (backgroundColor !== "transparent") {
@@ -314,9 +317,23 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
         link.click();
     }
 
+    const loadImage = (image) => {
+        const canvas = canvasRef.current;
+        const ctx = canvasRef.current.getContext("2d");
+        const img = new Image()
+        img.src = image
+        img.crossOrigin = "anonymous"
+        img.onload = () => {
+            ctx.drawImage(img, 0, 0);
+            setHistory([...history, canvas.toDataURL()]);
+            setCurrentHistoryIdx(history.length);
+        }
+    }
+
     return (<>
         <div className={"mt-8 fixed z-50 bg-blue-200 w-full h-12 flex justify-start items-center"}>
-            <MenuBar saveFile={saveFile}/>
+            <MenuBar saveFile={saveFile} clear={clear}/>
+            <MenuBarCloud history={history} loadImage={loadImage} filename={filename}/>
         </div>
         <div
             className={"mt-20 fixed z-30 bg-gray-100 w-full h-16 px-4 py-4 flex justify-between items-center gap-2"}>
@@ -414,7 +431,8 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
                 </div>*/}
                 <div className={"flex flex-row w-full justify-between text-white px-4"}>
                     <span>檔案名稱</span>
-                    <input type="text" className={'text-black block rounded-md border-0 px-2 py-1.5 shadow-sm'} value={filename}
+                    <input type="text" className={'text-black block rounded-md border-0 px-2 py-1.5 shadow-sm'}
+                           value={filename}
                            onChange={e => setFilename(e.target.value)}/>
                 </div>
                 <div className={"w-full border border-gray-300 my-3"}/>
@@ -494,6 +512,7 @@ export default function Painter({keyboardUsageOpen, setKeyboardUsageOpen}) {
                                 const ctx = canvasRef.current.getContext("2d");
                                 const image = new Image();
                                 image.src = e.target.result
+                                image.crossOrigin = 'anonymous'
                                 image.onload = () => {
                                     ctx.drawImage(image, startPoint.x, startPoint.y);
                                     setHistory([...history, canvas.toDataURL()]);
