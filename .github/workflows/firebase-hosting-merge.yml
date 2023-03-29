@@ -18,3 +18,4 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_NTHU_SS_CHATROOM }}'
           channelId: live
           projectId: nthu-ss-chatroom
+          target: ss-webcanvas

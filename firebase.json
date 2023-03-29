@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "ss-webcanvas",
     "public": "build",
     "ignore": [
       "firebase.json",
