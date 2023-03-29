@@ -102,7 +102,7 @@ First, you can toggle the outline mode / fill mode be clicking the mode button t
 ![](https://i.imgur.com/wAus4os.png)
 
 ##### Download file name
-You can customized the downloaded file name
+You can customize the downloaded file name
 ![](https://i.imgur.com/ObDhm6n.png)
 ![](https://i.imgur.com/dlgdSpz.png)
 
