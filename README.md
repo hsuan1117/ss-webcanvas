@@ -60,6 +60,7 @@ You can modify it on the right panel
 
 ##### Text Input
 Select the text input mode to start inputting words.  
+Use Enter to leave the text input mode (it'll be on the last pointer location)  
 ![](https://i.imgur.com/hZJw1gc.png)  
 
 You can also edit the typeface and font size on the menu bar.  
